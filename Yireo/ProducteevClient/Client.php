@@ -142,10 +142,10 @@ class Client
             throw new Exception('Empty redirect URL');
         }
 
-        $authenticateUrl = self::AUTH_URL . 'auth?client_id='.$clientId.'&response_type=code&redirect_uri=' . $redirectUrl;
+        $authenticateUrl = self::AUTH_URL . 'auth?client_id=' . $clientId . '&response_type=code&redirect_uri=' . $redirectUrl;
 
         if ($debug) {
-            echo '<a href="'.$authenticateUrl.'">Producteev authentication via OAuth2</a>';
+            echo '<a href="' . $authenticateUrl . '">Producteev authentication via OAuth2</a>';
             exit;
         }
 
@@ -176,14 +176,13 @@ class Client
             throw new Exception('Empty authentication code');
         }
 
-        $tokenUrl = self::AUTH_URL . 'token?client_id='.$clientId.'&client_secret='.$clientSecret.'&grant_type=authorization_code&redirect_uri='.$redirectUrl.'&code='.$authenticationCode;
-;
+        $tokenUrl = self::AUTH_URL . 'token?client_id=' . $clientId . '&client_secret=' . $clientSecret . '&grant_type=authorization_code&redirect_uri=' . $redirectUrl . '&code=' . $authenticationCode;;
 
         $httpClient = new HttpClient();
 
         try {
             $response = $httpClient->request('get', $tokenUrl);
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             throw new Exception('Token request failed. Please re-authenticate');
         }
 
@@ -191,7 +190,7 @@ class Client
         $responseBody = $response->getBody();
 
         if ($responseCode !== 200) {
-            throw new Exception('Server error');
+            throw new Exception(sprintf('Unexpected status code %s', $responseCode));
         }
 
         if (empty($responseBody)) {
@@ -209,7 +208,7 @@ class Client
         }
 
         $this->accessToken = $data['access_token'];
-        $this->accessTokenExpirationTime = time() + (int) $data['expires_in'] - 120;
+        $this->accessTokenExpirationTime = time() + (int)$data['expires_in'] - 120;
         $this->refreshToken = $data['refresh_token'];
 
         $cookieData = [];
@@ -234,7 +233,7 @@ class Client
         }
     }
 
-    public function request($resource, $requestType = 'GET', $data = [])
+    public function request($resource, $requestType = 'GET', $options = [])
     {
         $accessToken = $this->getAccessToken();
 
@@ -242,21 +241,16 @@ class Client
             throw new Exception('Empty access token');
         }
 
-        // @todo: Rewrite to header Authorization: Bearer TOKEN
-        $apiUrl = self::API_URL . $resource . '?access_token=' . $accessToken;
+        $apiUrl = self::API_URL . $resource;
+        $options['headers']['Authorization'] = 'Bearer ' . $accessToken;
 
         $httpClient = new HttpClient();
-
-        if ($requestType == 'POST') {
-            //print_r($data);exit;
-        }
-
-        $response = $httpClient->request($requestType, $apiUrl, $data);
+        $response = $httpClient->request($requestType, $apiUrl, $options);
 
         $responseCode = $response->getStatusCode();
         $responseBody = $response->getBody();
 
-        if (!in_array($responseCode, [200, 201])) {
+        if (!in_array($responseCode, [200, 201, 204])) {
             throw new Exception('Unexpected server error: ' . $responseCode);
         }
 
@@ -264,17 +258,20 @@ class Client
             throw new Exception(sprintf('Empty response from token URL %s', $apiUrl));
         }
 
-        $data = json_decode($responseBody, true);
+        $responseData = json_decode($responseBody, true);
 
-        if (empty($data)) {
+        if (empty($responseData)) {
             throw new Exception(sprintf('No JSON response: %s', $responseBody));
         }
 
-        return $data;
+        return $responseData;
     }
 
-    public function get($resource)
+    public function get($resource, $data = [])
     {
+        if (!empty($data)) {
+            return $this->request($resource, 'GET', ['query' => $data]);
+        }
         return $this->request($resource, 'GET');
     }
 
@@ -283,9 +280,20 @@ class Client
         return $this->request($resource, 'POST', ['body' => json_encode($data)]);
     }
 
-    public function put($resource, $data)
+    public function put($resource, $data = [])
     {
-        return $this->request($resource, 'PUT', ['body' => json_encode($data)]);
+        if (!empty($data)) {
+            return $this->request($resource, 'PUT', ['body' => json_encode($data)]);
+        }
+        return $this->request($resource, 'PUT');
+    }
+
+    public function delete($resource, $data = [])
+    {
+        if (!empty($data)) {
+            return $this->request($resource, 'DELETE', ['body' => json_encode($data)]);
+        }
+        return $this->request($resource, 'DELETE');
     }
 
     public function getResource($resourceName)

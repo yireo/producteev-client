@@ -54,9 +54,47 @@ if($client->isAccessTokenValid() === false) {
 
 // Example call
 echo '<pre>';
-print_r($client->getCurrentUser());
+print_r($client->getResource('users')->me());
 echo '</pre>';
 ```
 
 ### Cookies
 The access token is in this code sample stored in a cookie in the browser. Alternative storage can be used if you prefer.
+
+### API calls
+The following calls have been made accessible so far:
+
+Show all available networks:
+```php
+$networks = $client->getResource('networks')->items();
+```
+
+Get current user:
+```php
+$me = $client->getResource('users')->me();
+```
+
+Search for specific user:
+```php
+$exampleUser = $client->getResource('users')->findByEmail('info@example.com');
+```
+
+Get the default project of the current user:
+```php
+$defaultProject = $client->getResource('users')->getMyDefaultProject();
+```
+
+Create a project
+```php
+$projectData = ['title' => 'Test Project', 'description' => 'Test description'];
+$projectId = $client->getResource('projects')->create($projectData);
+```
+
+Create a task for an existing project, set the deadline to tomorrow, add some subtasks, assign the task to `$exampleUser` and remove the current user from the task:
+```php
+$taskDeadline = date('c', strtotime('tomorrow'));
+$taskSubtasks = [['title' => 'Some subtask', 'status' => 1], ['title' => 'Another subtask', 'status' => 1]];
+$taskData = ['title' => 'Test task', 'deadline' => $taskDeadline, 'subtasks' => $taskSubtasks, 'responsibles' => [$exampleUser], 'project' => ['id' => $projectId]];
+$taskId = $client->getResource('tasks')->create($taskData);
+$client->getResource('tasks')->removeResponsible($taskId, $me);
+```
