@@ -234,7 +234,7 @@ class Client
         }
     }
 
-    public function request($request)
+    public function request($resource, $requestType = 'GET', $data = [])
     {
         $accessToken = $this->getAccessToken();
 
@@ -243,15 +243,21 @@ class Client
         }
 
         // @todo: Rewrite to header Authorization: Bearer TOKEN
-        $apiUrl = self::API_URL . $request . '?access_token=' . $accessToken;
+        $apiUrl = self::API_URL . $resource . '?access_token=' . $accessToken;
 
         $httpClient = new HttpClient();
-        $response = $httpClient->get($apiUrl);
+
+        if ($requestType == 'POST') {
+            //print_r($data);exit;
+        }
+
+        $response = $httpClient->request($requestType, $apiUrl, $data);
+
         $responseCode = $response->getStatusCode();
         $responseBody = $response->getBody();
 
-        if ($responseCode !== 200) {
-            throw new Exception('Server error');
+        if (!in_array($responseCode, [200, 201])) {
+            throw new Exception('Unexpected server error: ' . $responseCode);
         }
 
         if (empty($responseBody)) {
@@ -267,8 +273,24 @@ class Client
         return $data;
     }
 
-    public function getCurrentUser()
+    public function get($resource)
     {
-        return $this->request('users/me');
+        return $this->request($resource, 'GET');
+    }
+
+    public function post($resource, $data)
+    {
+        return $this->request($resource, 'POST', ['body' => json_encode($data)]);
+    }
+
+    public function put($resource, $data)
+    {
+        return $this->request($resource, 'PUT', ['body' => json_encode($data)]);
+    }
+
+    public function getResource($resourceName)
+    {
+        $resourceClass = '\\Yireo\\ProducteevClient\\Resource\\' . ucfirst($resourceName);
+        return new $resourceClass($this);
     }
 }
