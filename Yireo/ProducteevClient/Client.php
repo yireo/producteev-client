@@ -1,221 +1,274 @@
 <?php
 namespace Yireo\ProducteevClient;
 
-use Yireo\AddressBook\Exception\InvalidArgument;
-use Yireo\Common\String\VariableName;
+use GuzzleHttp\Client as HttpClient;
+use Exception as Exception;
 
 class Client
 {
-    private $client_id = '';
+    const AUTH_URL = 'https://www.producteev.com/oauth/v2/';
 
-    private $client_secret = '';
+    const API_URL = 'https://www.producteev.com/api/';
 
-    private $base_url = 'https://www.producteev.com/oauth/v2/';
+    private $clientId = '';
 
-    private $returnType = '';
+    private $clientSecret = '';
 
-    private $params = [];
+    private $redirectUrl = '';
 
-    private $token = '';
+    private $accessToken = '';
 
-    private $dump;
+    private $refreshToken = '';
+
+    private $accessTokenExpirationTime = 0;
+
+    private $authenticationCode = '';
+
+    private $cookie;
+
+    public function __construct($clientId = '', $clientSecret = '', $redirectUrl = '')
+    {
+        $this->clientId = $clientId;
+        $this->clientSecret = $clientSecret;
+        $this->redirectUrl = $redirectUrl;
+    }
 
     /**
-     * Basically, you can either set it here if you only make occasional calls to the api, or (preferred method)
-     * just set it directly in the class by modifying $client_id and $client_secret directly. That way you're not
-     * setting it as part of every instantiation.
-     *
-     * @param string $key your api key
-     * @param string $secret your api secret
-     * @throws \Exception
+     * @return string
      */
-    public function __construct($key = '', $secret = '')
+    public function getClientId()
     {
-        if ($this->client_id == null) {
-            if ($key == '') {
-                throw new \Exception('Producteev API Key not set');
-            } else {
-                $this->client_id = $key;
-            }
+        return $this->clientId;
+    }
+
+    /**
+     * @param string $clientId
+     */
+    public function setClientId($clientId)
+    {
+        $this->clientId = $clientId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getClientSecret()
+    {
+        return $this->clientSecret;
+    }
+
+    /**
+     * @param string $clientSecret
+     */
+    public function setClientSecret($clientSecret)
+    {
+        $this->clientSecret = $clientSecret;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRedirectUrl()
+    {
+        return $this->redirectUrl;
+    }
+
+    /**
+     * @param string $redirectUrl
+     */
+    public function setRedirectUrl($redirectUrl)
+    {
+        $this->redirectUrl = $redirectUrl;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAccessToken()
+    {
+        return $this->accessToken;
+    }
+
+    /**
+     * @param string $accessToken
+     */
+    public function setAccessToken($accessToken)
+    {
+        $this->accessToken = $accessToken;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAccessTokenValid()
+    {
+        if (empty($this->accessToken)) {
+            return false;
         }
-        if ($this->client_secret == null) {
-            if ($secret == '') {
-                throw new \Exception('Producteev API Secret not set');
-            } else {
-                $this->client_secret = $secret;
-            }
+
+        if (strlen($this->accessToken) < 10) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAuthenticationCode()
+    {
+        return $this->authenticationCode;
+    }
+
+    /**
+     * @param string $authenticationCode
+     */
+    public function setAuthenticationCode($authenticationCode)
+    {
+        $this->authenticationCode = $authenticationCode;
+    }
+
+    public function authenticate($debug = false)
+    {
+        $redirectUrl = urlencode($this->redirectUrl);
+        $clientId = $this->clientId;
+
+        if (empty($clientId)) {
+            throw new Exception('Empty client ID');
+        }
+
+        if (empty($redirectUrl)) {
+            throw new Exception('Empty redirect URL');
+        }
+
+        $authenticateUrl = self::AUTH_URL . 'auth?client_id='.$clientId.'&response_type=code&redirect_uri=' . $redirectUrl;
+
+        if ($debug) {
+            echo '<a href="'.$authenticateUrl.'">Producteev authentication via OAuth2</a>';
+            exit;
+        }
+
+        header('Location: ' . $authenticateUrl);
+        exit;
+    }
+
+    public function retrieveAccessTokenToCookie()
+    {
+        $redirectUrl = urlencode($this->redirectUrl);
+        $clientId = $this->clientId;
+        $clientSecret = $this->clientSecret;
+        $authenticationCode = $this->authenticationCode;
+
+        if (empty($clientId)) {
+            throw new Exception('Empty client ID');
+        }
+
+        if (empty($clientSecret)) {
+            throw new Exception('Empty client secret');
+        }
+
+        if (empty($redirectUrl)) {
+            throw new Exception('Empty redirect URL');
+        }
+
+        if (empty($authenticationCode)) {
+            throw new Exception('Empty authentication code');
+        }
+
+        $tokenUrl = self::AUTH_URL . 'token?client_id='.$clientId.'&client_secret='.$clientSecret.'&grant_type=authorization_code&redirect_uri='.$redirectUrl.'&code='.$authenticationCode;
+;
+
+        $httpClient = new HttpClient();
+
+        try {
+            $response = $httpClient->request('get', $tokenUrl);
+        } catch(Exception $e) {
+            throw new Exception('Token request failed. Please re-authenticate');
+        }
+
+        $responseCode = $response->getStatusCode();
+        $responseBody = $response->getBody();
+
+        if ($responseCode !== 200) {
+            throw new Exception('Server error');
+        }
+
+        if (empty($responseBody)) {
+            throw new Exception(sprintf('Empty response from token URL %s', $tokenUrl));
+        }
+
+        $data = json_decode($responseBody, true);
+
+        if (empty($data) || !is_array($data)) {
+            throw new Exception(sprintf('No JSON response: %s', $responseBody));
+        }
+
+        if (isset($data['error']) && isset($data['error_description'])) {
+            throw new Exception(sprintf('Error %s: %s', $data['error'], $data['error_description']));
+        }
+
+        $this->accessToken = $data['access_token'];
+        $this->accessTokenExpirationTime = time() + (int) $data['expires_in'] - 120;
+        $this->refreshToken = $data['refresh_token'];
+
+        $cookieData = [];
+        $cookieData['access_token'] = $this->accessToken;
+        $cookieData['refresh_token'] = $this->refreshToken;
+        $cookie = new Cookie($this, $this->accessTokenExpirationTime);
+        $cookie->setData($cookieData);
+        $cookie->save();
+    }
+
+    public function retrieveAccessTokenFromCookie()
+    {
+        $cookie = new Cookie($this);
+        $cookieData = $cookie->getData();
+
+        if (isset($cookieData['access_token'])) {
+            $this->accessToken = $cookieData['access_token'];
+        }
+
+        if (isset($cookieData['refresh_token'])) {
+            $this->refreshToken = $cookieData['refresh_token'];
         }
     }
 
-    /**
-     *
-     * @param  string $type one of json |
-     *
-     * @return void
-     * @throws \Exception
-     */
-    public function setReturnType($type)
+    public function request($request)
     {
-        if (in_array($type, array('json'))) {
-            $this->returnType = $type;
-        } else {
-            throw new \Exception('Invalid request type');
+        $accessToken = $this->getAccessToken();
+
+        if (empty($accessToken)) {
+            throw new Exception('Empty access token');
         }
-    }
 
-    public function setParams($params)
-    {
-        foreach ($params as $name => $value) {
-            $this->setParam($name, $value);
+        // @todo: Rewrite to header Authorization: Bearer TOKEN
+        $apiUrl = self::API_URL . $request . '?access_token=' . $accessToken;
+
+        $httpClient = new HttpClient();
+        $response = $httpClient->get($apiUrl);
+        $responseCode = $response->getStatusCode();
+        $responseBody = $response->getBody();
+
+        if ($responseCode !== 200) {
+            throw new Exception('Server error');
         }
-    }
 
-    /**
-     *
-     * @param $name string
-     * @param $value mixed
-     *
-     * @return void
-     */
-    public function setParam($name, $value = '')
-    {
-        $this->params[$name] = $value;
-    }
-
-    public function getParam($key)
-    {
-        return $this->params[$key];
-    }
-
-    /**
-     * Logs in
-     *
-     * @param  string $email
-     * @param  string $password
-     *
-     * @return object
-     */
-    /*public function login($email, $password)
-    {
-        $this->setParam('email', $email);
-        $this->setParam('password', $password);
-        $d = $this->execute('users/login');
-        $this->token = $d->login->token;
-        return $d;
-    }*/
-
-    /**
-     * Executes whatever action is passed to it.
-     *
-     * This method ensures that the url is properly formatted. It doesn't actually perform an direct operation on
-     * the url, instead it will call $this->Curl() which will actually perform the request and deal with the
-     * results.
-     *
-     * @param  string $action One of the supported actions from the api
-     *
-     * @return mixed An stdObject containing the results of your request
-     */
-    public function execute($action)
-    {
-        $url = $this->base_url . $action;
-        $url .= ($this->returnType == null) ? '.json?' : '.' . $this->returnType . '?';
-        $url .= $this->generateUrl();
-        return $this->curl($url);
-    }
-
-    /**
-     * At the moment this just performs the request and then returns the data (after storing the token if there
-     * is one)
-     *
-     * @param  $url
-     *
-     * @return mixed
-     * @throws \Exception
-     */
-    private function curl($url)
-    {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false,    // Shortcut for now
-        ));
-        $result = curl_exec($ch);
-        $data = json_decode($result);
-
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        switch (curl_getinfo($ch, CURLINFO_HTTP_CODE)) {
-            case 200:
-                // Patch to ensure that the token is always stored
-                if ($data->login != null && $data->login->token != null) {
-                    $this->token = $data->login->token;
-                }
-                break;
-            case 403:
-                throw new \Exception('403 Forbidden ['.$url.']: ' . $data->error->message . ' = ' . var_export($this->dump, true));
-
-            default:
-                throw new \Exception('CURL error ['.$url.']: ' . ' HTTP Status ' . $httpCode . ' : ' . curl_error($ch));
+        if (empty($responseBody)) {
+            throw new Exception(sprintf('Empty response from token URL %s', $apiUrl));
         }
-        
-        curl_close($ch);
-        $this->clearParams();
+
+        $data = json_decode($responseBody, true);
+
+        if (empty($data)) {
+            throw new Exception(sprintf('No JSON response: %s', $responseBody));
+        }
+
         return $data;
     }
 
-    /**
-     * Just deletes the params for now.
-     *
-     * @return void
-     */
-    public function clearParams()
+    public function getCurrentUser()
     {
-        $this->params = array();
-    }
-
-    /**
-     * Generates the URL through concatination of params and persistent params. It generates the signature first
-     * and then proceeds to mush all the parameters together.
-     *
-     * @return string
-     */
-    private function generateUrl()
-    {
-        $this->setParam('client_id', $this->client_id);
-
-        if ($this->token != null) {
-            $this->setParam('token', $this->token);
-        }
-
-        // Needs to be called after all params are set
-        $this->generateSignature();
-        $str = '';
-
-        foreach ($this->params as $x => $d) {
-            $str .= $x . '=' . urlencode($d) . '&';
-        }
-
-        return substr($str, 0, strlen($str) - 1);
-    }
-
-    /**
-     * Essentially the same code that is present on the api website, this just constructs the signature
-     *
-     * @return void
-     */
-    public function generateSignature()
-    {
-        $str = '';
-        ksort($this->params);   // THIS IS VITAL!
-
-        foreach ($this->params as $k => $v) {
-            if (is_string($v)) {
-                $str .= "$k$v";
-            }
-        }
-
-        $str .= $this->client_secret;
-        $str = stripslashes($str);
-        $this->setParam('api_sig', md5($str));
+        return $this->request('users/me');
     }
 }

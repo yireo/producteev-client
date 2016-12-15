@@ -18,7 +18,7 @@ class Cookie
             $this->expirationTime = $expirationTime;
         }
 
-        $this->retrieveFromCookie();
+        $this->data = $this->retrieveFromCookie();
     }
 
     public function isValid()
