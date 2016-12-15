@@ -98,3 +98,13 @@ $taskData = ['title' => 'Test task', 'deadline' => $taskDeadline, 'subtasks' => 
 $taskId = $client->getResource('tasks')->create($taskData);
 $client->getResource('tasks')->removeResponsible($taskId, $me);
 ```
+
+List all projects:
+```php
+$projects = $client->getResource('projects')->items();
+```
+
+Search for projects with the word "office" in their title:
+```php
+$projects = $client->getResource('projects')->search('office);
+```

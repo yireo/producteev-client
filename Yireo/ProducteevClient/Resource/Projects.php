@@ -2,16 +2,31 @@
 namespace Yireo\ProducteevClient\Resource;
 
 use InvalidArgumentException;
+use \Yireo\ProducteevClient\Resource;
 
-// @todo: Missing overview of projects
-
-class Projects
+class Projects extends Resource
 {
-    private $client;
+    protected $networkId = 0;
 
-    public function __construct(\Yireo\ProducteevClient\Client $client)
+    public function items()
     {
-        $this->client = $client;
+        $data = $this->client->get('networks/' . $this->getNetworkId() . '/projects');
+
+        return $data['projects'];
+    }
+
+    public function search($searchPhrase)
+    {
+        $projects = $this->items();
+        $matchProjects = [];
+
+        foreach ($projects as $project) {
+            if (stristr($project['title'], $searchPhrase)) {
+                $matchProjects[] = $project;
+            }
+        }
+
+        return $matchProjects;
     }
 
     public function create($projectData)
@@ -24,10 +39,8 @@ class Projects
             throw new InvalidArgumentException('Title is required');
         }
 
-        // By default, use the first network availablel
         if (empty($projectData['network']['id'])) {
-            $network = $this->client->getResource('networks')->getFirstNetwork();
-            $projectData['network']['id'] = $network['id'];
+            $projectData['network']['id'] = $this->getNetworkId();
         }
 
         if (empty($projectData['network']['id'])) {
@@ -37,5 +50,26 @@ class Projects
         $data = $this->client->post('projects', ['project' => $projectData]);
 
         return $data['project']['id'];
+    }
+
+    /**
+     * @return int
+     */
+    public function getNetworkId()
+    {
+        if (empty($this->networkId)) {
+            $network = $this->client->getResource('networks')->getFirstNetwork();
+            $this->networkId = $network['id'];
+        }
+
+        return $this->networkId;
+    }
+
+    /**
+     * @param int $networkId
+     */
+    public function setNetworkId($networkId)
+    {
+        $this->networkId = $networkId;
     }
 }
