@@ -254,6 +254,10 @@ class Client
             throw new Exception('Unexpected server error: ' . $responseCode);
         }
 
+        if ($responseCode == 204) {
+            return [];
+        }
+
         if (empty($responseBody)) {
             throw new Exception(sprintf('Empty response from token URL %s', $apiUrl));
         }
