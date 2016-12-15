@@ -1,0 +1,22 @@
+{
+  "name": "yireo/producteev-client",
+  "type": "library",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/yireo/producteev-client",
+  "description": "PHP client for Producteev",
+  "authors": [
+    {
+      "name": "Jisse Reitsma (Yireo)",
+      "email": "jisse@yireo.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.6.0",
+    "guzzlehttp/guzzle": "~6.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Yireo\\": "Yireo"
+    }
+  }
+}
