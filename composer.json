@@ -16,7 +16,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Yireo\\": "Yireo"
+      "Yireo\ProducteevClient\\": "Yireo/ProducteevClient"
     }
   }
 }

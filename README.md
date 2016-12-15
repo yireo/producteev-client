@@ -57,3 +57,6 @@ echo '<pre>';
 print_r($client->getCurrentUser());
 echo '</pre>';
 ```
+
+### Cookies
+The access token is in this code sample stored in a cookie in the browser. Alternative storage can be used if you prefer.
