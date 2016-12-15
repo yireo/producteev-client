@@ -14,15 +14,16 @@ This client is installed via composer:
 First of all, see the documentation of Producteev on the usage of their API:
 https://www.producteev.com/api/doc/#Introduction
 
-Read their instructions on how to create a new app. Write down the client ID and client secret of this app. In the example below
-these are the `$clientId` and `$clientSecret` variables.
+Read their instructions on how to create a new app. Write down the client ID and client secret of this app. In the example below these are the `$clientId` and `$clientSecret` variables.
+
+Now, setup a webpage, add the code below, and access it. In the example, the URL will be `http://example.com`:
 
 ```php
 require __DIR__ . '/vendor/autoload.php';
 
 $client = new \Yireo\ProducteevClient\Client($clientId, $clientSecret);
 $client->retrieveAccessTokenFromCookie();
-$redirectUrl = 'http://addressbook.yireo.dev/producteev_test.php';
+$redirectUrl = 'http://example.com/';
 $client->setRedirectUrl($redirectUrl);
 
 if (!empty($_REQUEST['code'])) {
