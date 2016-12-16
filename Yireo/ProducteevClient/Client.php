@@ -245,7 +245,24 @@ class Client
         $options['headers']['Authorization'] = 'Bearer ' . $accessToken;
 
         $httpClient = new HttpClient();
-        $response = $httpClient->request($requestType, $apiUrl, $options);
+
+        try {
+            $response = $httpClient->request($requestType, $apiUrl, $options);
+        } catch (\GuzzleHttp\Exception\ClientException $exception) {
+            $response = $exception->getResponse();
+            $responseCode = $response->getStatusCode();
+            $responseBody = $response->getBody();
+            $responseData = json_decode($responseBody, true);
+
+            $message = 'Producteev responds with HTTP Status ' . $responseCode;
+
+            if (isset($responseData['error_description'])) {
+                $message .= ': ' . $responseData['error_description'];
+            }
+
+            throw new Exception($message);
+        }
+
 
         $responseCode = $response->getStatusCode();
         $responseBody = $response->getBody();
