@@ -84,6 +84,14 @@ class Tasks
             throw new InvalidArgumentException('Task ID should not be empty');
         }
 
+        if (empty($subtaskData)) {
+            return false;
+        }
+
+        if (empty($subtaskData['title'])) {
+            return false;
+        }
+
         return $this->client->post('tasks/' . $taskId . '/subtasks', ['subtask' => $subtaskData]);
     }
 

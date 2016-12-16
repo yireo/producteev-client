@@ -254,11 +254,13 @@ class Client
             $responseBody = $response->getBody();
             $responseData = json_decode($responseBody, true);
 
-            $message = 'Producteev responds with HTTP Status ' . $responseCode;
+            $message = 'Producteev responds with HTTP Status ' . $responseCode . ' ['.$resource.']';
 
             if (isset($responseData['error_description'])) {
                 $message .= ': ' . $responseData['error_description'];
             }
+
+            $message .= ' Data sent: ' . var_export($options, true);
 
             throw new Exception($message);
         }
