@@ -4,8 +4,8 @@
 This PHP client makes use of the Producteev API, authenticating using OAuth2 and depends on Guzzle.
 
 ## Status
-Beta (but it might be ready for production). This API client is used by ourselves to integrate various other
-systems with Productev, for instance to create complete projects (including tasks and subtasks) through
+Beta (aka *it might be ready for production*). This API client is used by ourselves to integrate various other
+systems with Producteev, for instance to create complete projects (including tasks and subtasks) through
 batch-scripts.
 
 This package is also listed on Packagist: https://packagist.org/packages/yireo/producteev-client
