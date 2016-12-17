@@ -4,7 +4,7 @@
 This PHP client makes use of the Producteev API, authenticating using OAuth2 and depends on Guzzle.
 
 ## Status
-Alpha (not ready for production). Because of this, this library is not available on Packagist (yet).
+Beta (not ready for production). Because of this, this library is not available on Packagist (yet).
 
 APIs tested:
 - `users/me`
