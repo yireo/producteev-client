@@ -4,10 +4,11 @@
 This PHP client makes use of the Producteev API, authenticating using OAuth2 and depends on Guzzle.
 
 ## Status
-Beta (not ready for production). Because of this, this library is not available on Packagist (yet).
+Beta (but it might be ready for production). This API client is used by ourselves to integrate various other
+systems with Productev, for instance to create complete projects (including tasks and subtasks) through
+batch-scripts.
 
-APIs tested:
-- `users/me`
+This package is also listed on Packagist: https://packagist.org/packages/yireo/producteev-client
 
 ## Installation
 This client is installed via composer:
